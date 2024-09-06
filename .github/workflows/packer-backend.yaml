@@ -1,7 +1,6 @@
 name: Packer-Backend
 
 on:
-  workflow_dispatch:
   push:
     branches: 
     - main
@@ -108,10 +107,8 @@ jobs:
     - id: build
       name: Packer Build
       env:
-        PKR_VAR_arm_subscription_id: ${{ vars.ARM_SUBSCRIPTION_ID }}
-        PKR_VAR_arm_tenant_id: ${{ vars.ARM_TENANT_ID }}
-        PKR_VAR_arm_client_id: ${{ vars.PACKER_ARM_CLIENT_ID }}
-        PKR_VAR_arm_client_secret: ${{ secrets.PACKER_ARM_CLIENT_SECRET }}
+        AWS_ACCESS_KEY_ID: ${{ vars.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         PKR_VAR_image_version: ${{ steps.image-version.outputs.version }}
         PKR_VAR_agent_ipaddress: ${{ steps.agent-ipaddress.outputs.ipaddress }}
       working-directory: ${{ env.WORKING_DIRECTORY }}

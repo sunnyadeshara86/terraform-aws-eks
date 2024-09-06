@@ -1,31 +1,35 @@
-resource "azurerm_application_security_group" "frontend" {
-
-  name                = "asg-${var.application_name}-${var.environment_name}-frontend"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-
+resource "aws_security_group" "frontend" {
+  name        = "${var.application_name}-${var.environment_name}-frontend-sg"
+  description = "Security group for the frontend EC2 instances"
+  vpc_id      = aws_vpc.main.id
 }
 
-resource "azurerm_network_security_group" "frontend" {
-
-  name                = "nsg-${var.application_name}-${var.environment_name}-frontend"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-
+# Allow traffic from the Frontend ALB into the Frontend EC2 Instances
+resource "aws_security_group_rule" "frontend_http" {
+  type                     = "ingress"
+  from_port                = 5000
+  to_port                  = 5000
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.frontend.id
+  source_security_group_id = aws_security_group.frontend_lb.id
 }
 
-resource "azurerm_network_security_rule" "frontend_http" {
+# Allow SSH Access to Frontend EC2 Instances
+resource "aws_security_group_rule" "frontend_ssh" {
+  type              = "ingress"
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  security_group_id = aws_security_group.frontend.id
+  cidr_blocks       = ["0.0.0.0/0"]
+}
 
-  resource_group_name                        = azurerm_resource_group.main.name
-  network_security_group_name                = azurerm_network_security_group.frontend.name
-  name                                       = "allow-http"
-  priority                                   = "2001"
-  access                                     = "Allow"
-  direction                                  = "Inbound"
-  protocol                                   = "Tcp"
-  source_port_range                          = "*"
-  destination_port_range                     = "5000"
-  source_address_prefix                      = "*"
-  destination_application_security_group_ids = [azurerm_application_security_group.frontend.id]
-
+# allow traffic from the Frontend to flow into the Backend Load Balancer
+resource "aws_security_group_rule" "frontend_egress_http" {
+  type                     = "egress"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.frontend.id
+  source_security_group_id = aws_security_group.backend_lb.id
 }

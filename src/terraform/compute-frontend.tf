@@ -1,60 +1,61 @@
 
-data "azurerm_image" "frontend" {
-  name                = var.frontend_image.name
-  resource_group_name = var.frontend_image.resource_group_name
-}
+data "aws_ami" "frontend" {
+  most_recent = true
+  owners      = ["self"]
 
-resource "azurerm_network_interface" "frontend" {
-
-  count = var.az_count
-
-  name                = "nic-${var.application_name}-${var.environment_name}-frontend${count.index}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.frontend.id
-    private_ip_address_allocation = "Dynamic"
+  filter {
+    name   = "name"
+    values = [var.frontend_image_name]
   }
 }
 
-resource "azurerm_network_interface_application_security_group_association" "frontend" {
+data "aws_key_pair" "temp" {
+  key_name = "temp_key"
+}
 
-  count = var.az_count
+resource "aws_network_interface" "frontend" {
 
-  network_interface_id          = azurerm_network_interface.frontend[count.index].id
-  application_security_group_id = azurerm_application_security_group.frontend.id
+  for_each = aws_subnet.frontend
+
+  subnet_id = each.value.id
+}
+
+resource "aws_network_interface_sg_attachment" "frontend" {
+
+  for_each = aws_instance.frontend
+
+  security_group_id    = aws_security_group.frontend.id
+  network_interface_id = each.value.primary_network_interface_id
 
 }
 
-resource "azurerm_linux_virtual_machine" "frontend" {
+resource "aws_instance" "frontend" {
 
-  count = var.az_count
+  for_each = aws_subnet.frontend
 
-  name                = "vm-${var.application_name}-${var.environment_name}-frontend${count.index}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  size                = "Standard_F2"
-  admin_username      = var.admin_username
-  zone                = count.index + 1
+  ami           = data.aws_ami.frontend.id
+  instance_type = var.frontend_instance_type
+  key_name      = data.aws_key_pair.temp.key_name
+  user_data     = data.cloudinit_config.frontend.rendered
 
-  network_interface_ids = [
-    azurerm_network_interface.frontend[count.index].id
-  ]
-
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = tls_private_key.ssh.public_key_openssh
+  network_interface {
+    network_interface_id = aws_network_interface.frontend[each.key].id
+    device_index         = 0
   }
 
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+  tags = {
+    Name        = "${var.application_name}-${var.environment_name}-frontend-vm"
+    application = var.application_name
+    environment = var.environment_name
   }
 
-  source_image_id = data.azurerm_image.frontend.id
-  user_data       = data.cloudinit_config.frontend.rendered
+}
+
+resource "aws_eip" "frontend" {
+
+  for_each = aws_instance.frontend
+
+  instance = each.value.id
 
 }
 
@@ -69,17 +70,7 @@ data "cloudinit_config" "frontend" {
                    write_files:
                      - path: /etc/profile.d/backend_endpoint.sh
                        content: |
-                         export DOTNET_BACKEND_ENDPOINT="http://${azurerm_lb.backend.frontend_ip_configuration[0].private_ip_address}"
+                         export BackendEndpoint="${aws_lb.backend.dns_name}"
                    EOF
-  }
-  part {
-    filename     = "1-update-service.sh"
-    content_type = "text/x-shellscript"
-    content      = <<-EOF
-      #!/bin/bash
-      sed -i 's|BACKEND_PLACEHOLDER|${azurerm_lb.backend.frontend_ip_configuration[0].private_ip_address}|g' /etc/systemd/system/myblazorapp.service
-      systemctl daemon-reload
-      systemctl restart myblazorapp.service
-    EOF
   }
 }

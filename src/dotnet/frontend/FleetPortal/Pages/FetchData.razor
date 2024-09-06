@@ -2,11 +2,8 @@
 
 <PageTitle>Weather forecast</PageTitle>
 
-@using System.Linq;
-@using FleetAPI;
-@using FleetPortal.Data;
-@inject HttpClient HttpClient
-@inject FleetPortalBackendConfig BackendConfig
+@using FleetPortal.Data
+@inject WeatherForecastService ForecastService
 
 <h1>Weather forecast</h1>
 
@@ -31,7 +28,7 @@ else
             @foreach (var forecast in forecasts)
             {
                 <tr>
-                    <td>@forecast.Date.UtcDateTime.ToShortDateString()</td>
+                    <td>@forecast.Date.ToShortDateString()</td>
                     <td>@forecast.TemperatureC</td>
                     <td>@forecast.TemperatureF</td>
                     <td>@forecast.Summary</td>
@@ -40,20 +37,12 @@ else
         </tbody>
     </table>
 }
-<p>Message: @errorMessage</p>
 
 @code {
     private WeatherForecast[]? forecasts;
-    private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
-        var envVarValue = System.Environment.GetEnvironmentVariable("DOTNET_BACKEND_ENDPOINT");
-        errorMessage = $"INJECTED:{BackendConfig.Endpoint}";
-        errorMessage += $"ENVVAR:{envVarValue}";
-
-        var client = new FleetAPIClient(BackendConfig.Endpoint, HttpClient);
-        var result = await client.GetWeatherForecastAsync();
-        forecasts = result.ToArray();
+        forecasts = await ForecastService.GetForecastAsync(DateTime.Now);
     }
 }

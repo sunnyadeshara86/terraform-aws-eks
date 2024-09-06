@@ -1,58 +1,47 @@
 
-data "azurerm_image" "backend" {
-  name                = var.backend_image.name
-  resource_group_name = var.backend_image.resource_group_name
-}
+data "aws_ami" "backend" {
+  most_recent = true
+  owners      = ["self"]
 
-resource "azurerm_network_interface" "backend" {
-
-  count = var.az_count
-
-  name                = "nic-${var.application_name}-${var.environment_name}-backend${count.index}"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.backend.id
-    private_ip_address_allocation = "Dynamic"
+  filter {
+    name   = "name"
+    values = [var.backend_image_name]
   }
 }
 
-resource "azurerm_network_interface_application_security_group_association" "backend" {
+resource "aws_network_interface" "backend" {
 
-  count = var.az_count
+  for_each = aws_subnet.backend
 
-  network_interface_id          = azurerm_network_interface.backend[count.index].id
-  application_security_group_id = azurerm_application_security_group.backend.id
+  subnet_id = each.value.id
+}
+
+resource "aws_network_interface_sg_attachment" "backend" {
+
+  for_each = aws_instance.backend
+
+  security_group_id    = aws_security_group.backend.id
+  network_interface_id = each.value.primary_network_interface_id
 
 }
 
-resource "azurerm_linux_virtual_machine" "backend" {
+resource "aws_instance" "backend" {
 
-  count = var.az_count
+  for_each = aws_subnet.backend
 
-  name                = "vm-${var.application_name}-${var.environment_name}-backend${count.index}"
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-  size                = "Standard_F2"
-  admin_username      = var.admin_username
-  zone                = count.index + 1
+  ami           = data.aws_ami.backend.id
+  instance_type = var.backend_instance_type
+  key_name      = data.aws_key_pair.temp.key_name
 
-  network_interface_ids = [
-    azurerm_network_interface.backend[count.index].id
-  ]
-
-  admin_ssh_key {
-    username   = var.admin_username
-    public_key = tls_private_key.ssh.public_key_openssh
+  network_interface {
+    network_interface_id = aws_network_interface.backend[each.key].id
+    device_index         = 0
   }
 
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+  tags = {
+    Name        = "${var.application_name}-${var.environment_name}-backend-vm"
+    application = var.application_name
+    environment = var.environment_name
   }
-
-  source_image_id = data.azurerm_image.backend.id
 
 }

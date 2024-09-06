@@ -1,7 +1,6 @@
-output "frontend_public_ip_address" {
-  value = azurerm_public_ip.frontend.ip_address
+output "public_subnets" {
+  value = local.public_subnets
 }
-
-output "backend_private_ip_address" {
-  value = azurerm_lb.backend.frontend_ip_configuration[0].private_ip_address
+output "private_subnets" {
+  value = local.private_subnets
 }

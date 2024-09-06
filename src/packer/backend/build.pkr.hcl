@@ -1,7 +1,7 @@
 
 build {
   sources = [
-    "source.azure-arm.vm"
+    "source.amazon-ebs.vm"
   ]
 
   provisioner "file" {
@@ -78,12 +78,6 @@ build {
     inline = [
       "systemctl enable myblazorapp.service"
     ]
-  }
-
-  provisioner "shell" {
-    execute_command = local.execute_command
-    inline = ["/usr/sbin/waagent -force -deprovision+user && export HISTSIZE=0 && sync"]
-    only = ["azure-arm"]
   }
 
 }

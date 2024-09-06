@@ -1,19 +1,20 @@
 terraform {
   required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 3.75.0"
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.17"
     }
     cloudinit = {
       source  = "hashicorp/cloudinit"
       version = "~> 2.3.2"
     }
   }
-  backend "azurerm" {
+  backend "s3" {
   }
 }
 
-provider "azurerm" {
-  features {}
+# Configure the AWS Provider
+provider "aws" {
+  region = var.primary_region
 }
-# do be
+
