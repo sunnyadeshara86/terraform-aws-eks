@@ -1,12 +1,11 @@
 name: Terraform-Plan
 
 on:
-  workflow_dispatch:
-    inputs:
-      example_input:
-        description: 'An example input'
-        required: false
-        default: 'default value'
+  pull_request:
+    branches: 
+    - master
+    paths:
+    - 'src/terraform/**'
 
 env:
   TERRAFORM_VERSION: '1.5.7'
