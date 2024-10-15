@@ -1,4 +1,4 @@
-# [Terraform on AWS EKS Kubernetes IaC]
+# Terraform on AWS EKS Kubernetes IaC
 
 ## Topics Covered
 01. Infrastructure as Code (IaC)
