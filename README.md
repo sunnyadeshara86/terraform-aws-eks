@@ -1,4 +1,4 @@
-# [Terraform on AWS EKS Kubernetes IaC SRE- 50 Real-World Demos](https://links.stacksimplify.com/terraform-on-aws-eks-kubernetes-iac-sre)
+# [Terraform on AWS EKS Kubernetes IaC]
 
 ## Topics Covered
 01. Infrastructure as Code (IaC)
